@@ -1,83 +1,65 @@
-# import pandas as pd
-# from bs4 import BeautifulSoup
-# import requests as r
-# import streamlit as st
 
-# st.markdown('<h1 style="background-color: gainsboro; padding-left: 10px; padding-bottom: 20px;">Search Engine Scraper</h1>', unsafe_allow_html=True)
-# query = st.text_input('', help='Enter the search string and hit Enter/Return')
-# query = query.replace(" ", "+") #replacing the spaces in query result with +
-# print(1)
-# if query: #Activates the code below on hitting Enter/Return in the search textbox
-#     try:#Exception handling 
-#         req = r.get(f"https://www.bing.com/search?q={query}",
-#                     headers = {"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36"})
-#         result_str = '<html><table style="border: none;">' #Initializing the HTML code for displaying search results
-        
-#         if req.status_code == 200: #Status code 200 indicates a successful request
-#             bs = BeautifulSoup(req.content, features="html.parser") #converting the content/text returned by request to a BeautifulSoup object
-#             search_result = bs.find_all("li", class_="b_algo") #'b_algo' is the class of the list object which represents a single result
-#             search_result = [str(i).replace("<strong>","") for i in search_result] #removing the <strong> tag
-#             search_result = [str(i).replace("</strong>","") for i in search_result] #removing the </strong> tag
-#             result_df = pd.DataFrame() #Initializing the data frame that stores the results
-            
-#             for n,i in enumerate(search_result): #iterating through the search results
-#                 individual_search_result = BeautifulSoup(i, features="html.parser") #converting individual search result into a BeautifulSoup object
-#                 h2 = individual_search_result.find('h2') #Finding the title of the individual search result
-#                 href = h2.find('a').get('href') #title's URL of the individual search result
-#                 cite = f'{href[:50]}...' if len(href) >= 50 else href # cite with first 20 chars of the URL
-#                 url_txt = h2.find('a').text #title's text of the individual search result
-#                 #In a few cases few individual search results doesn't have a description. In such cases the description would be blank
-#                 description = "" if individual_search_result.find('p') is None else individual_search_result.find('p').text
-#                 #Appending the result data frame after processing each individual search result
-#                 result_df = result_df.append(pd.DataFrame({"Title": url_txt, "URL": href, "Description": description}, index=[n]))
-#                 count_str = f'<b style="font-size:20px;">Bing Search returned {len(result_df)} results</b>'
-#                 ########################################################
-#                 ######### HTML code to display search results ##########
-#                 ########################################################
-#                 result_str += f'<tr style="border: none;"><h3><a href="{href}" target="_blank">{url_txt}</a></h3></tr>'+\
-#                 f'<tr style="border: none;"><strong style="color:green;">{cite}</strong></tr>'+\
-#                 f'<tr style="border: none;">{description}</tr>'+\
-#                 f'<tr style="border: none;"><td style="border: none;"></td></tr>'
-#             result_str += '</table></html>'
-            
-#         #if the status code of the request isn't 200, then an error message is displayed along with an empty data frame        
-#         else:
-#             result_df = pd.DataFrame({"Title": "", "URL": "", "Description": ""}, index=[0])
-#             result_str = '<html></html>'
-#             count_str = '<b style="font-size:20px;">Looks like an error!!</b>'
-            
-#     #if an exception is raised, then an error message is displayed along with an empty data frame
-#     except:
-#         result_df = pd.DataFrame({"Title": "", "URL": "", "Description": ""}, index=[0])
-#         result_str = '<html></html>'
-#         count_str = '<b style="font-size:20px;">Looks like an error!!</b>'
-    
-#     st.markdown(f'{count_str}', unsafe_allow_html=True)
-#     st.markdown(f'{result_str}', unsafe_allow_html=True)
-#     st.markdown('<h3>Data Frame of the above search result</h3>', unsafe_allow_html=True)
-#     st.dataframe(result_df)
-    
-    
-    
+import os
+
+import streamlit as st
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
-import streamlit as st
-
-@st.cache_resource
-def get_driver():
-    return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.common.by import By
 
 options = Options()
-# options.add_argument('--disable-gpu')
-# options.add_argument('--headless')
+options.add_argument("--headless")
+options.add_argument("--no-sandbox")
+options.add_argument("--disable-dev-shm-usage")
+options.add_argument("--disable-gpu")
+options.add_argument("--disable-features=NetworkService")
+options.add_argument("--window-size=1920x1080")
+options.add_argument("--disable-features=VizDisplayCompositor")
 
-driver = get_driver()
-driver.get("https://statusinvest.com.br/fundos-imobiliarios/alzm11")
+
+def delete_selenium_log():
+    if os.path.exists('selenium.log'):
+        os.remove('selenium.log')
 
 
-st.code(driver.page_source)
-driver.quit()
+def show_selenium_log():
+    if os.path.exists('selenium.log'):
+        with open('selenium.log') as f:
+            content = f.read()
+            st.code(content)
 
+
+def run_selenium():
+    name = str()
+    with webdriver.Chrome(options=options, service_log_path='selenium.log') as driver:
+        url = "https://www.unibet.fr/sport/football/europa-league/europa-league-matchs"
+        driver.get(url)
+        xpath = '//*[@class="ui-mainview-block eventpath-wrapper"]'
+        # Wait for the element to be rendered:
+        element = WebDriverWait(driver, 10).until(lambda x: x.find_elements(by=By.XPATH, value=xpath))
+        name = element[0].get_property('attributes')[0]['name']
+    return name
+
+
+if __name__ == "__main__":
+    delete_selenium_log()
+    st.set_page_config(page_title="Selenium Test", page_icon='✅',
+        initial_sidebar_state='collapsed')
+    st.title('🔨 Selenium Test for Streamlit Sharing')
+    st.markdown('''This app is only a very simple test for **Selenium** running on **Streamlit Sharing** runtime.<br>
+        The suggestion for this demo app came from a post on the Streamlit Community Forum.<br>
+        <https://discuss.streamlit.io/t/issue-with-selenium-on-a-streamlit-app/11563><br>
+        This is just a very very simple example and more a proof of concept.
+        A link is called and waited for the existence of a specific class and read it.
+        If there is no error message, the action was successful.
+        Afterwards the log file of chromium is read and displayed.
+        ---
+        ''', unsafe_allow_html=True)
+
+    st.balloons()
+    if st.button('Start Selenium run'):
+        st.info('Selenium is running, please wait...')
+        result = run_selenium()
+        st.info(f'Result -> {result}')
+        st.info('Successful finished. Selenium log file is shown below...')
+        show_selenium_log()
